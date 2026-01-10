@@ -2,5 +2,9 @@
   "female_default": {
     "wav": "asset/zero_shot_prompt.wav",
     "text": "希望你以后能够做的比我还好呦。"
+  },
+  "voice": {
+    "wav": "voice_presets/voice/sample.wav",
+    "text": "REPLACE_WITH_TRANSCRIPT_OF_SAMPLE_WAV"
   }
 }
