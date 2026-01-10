@@ -29,6 +29,7 @@ from pydantic import BaseModel
 
 import uvicorn
 import numpy as np
+import torch
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(ROOT_DIR, '..', '..', '..'))
@@ -204,6 +205,9 @@ if __name__ == '__main__':
                         type=str,
                         default='iic/CosyVoice2-0.5B',
                         help='local path or modelscope repo id')
+    parser.add_argument('--fp16',
+                        action='store_true',
+                        help='Use FP16 autocast on GPU for faster inference')
     parser.add_argument('--default_prompt_wav',
                         type=str,
                         default=os.path.join(REPO_ROOT, 'asset', 'zero_shot_prompt.wav'),
@@ -222,7 +226,11 @@ if __name__ == '__main__':
                         help='Fallback preset speaker id for models that support SFT')
 
     args = parser.parse_args()
-    cosyvoice = AutoModel(model_dir=args.model_dir)
+    cosyvoice = AutoModel(model_dir=args.model_dir, fp16=args.fp16)
+
+    logging.info(f'torch.cuda.is_available={torch.cuda.is_available()}')
+    if torch.cuda.is_available():
+        logging.info(f'gpu={torch.cuda.get_device_name(0)}')
 
     # Globals used by the OpenAI-compatible endpoint
     default_prompt_text = args.default_prompt_text

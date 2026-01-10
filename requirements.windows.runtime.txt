@@ -19,7 +19,7 @@ modelscope==1.20.0
 networkx==3.1
 numpy==1.26.4
 omegaconf==2.3.0
-onnxruntime==1.18.0
+onnxruntime-gpu==1.23.2
 openai-whisper==20231117
 protobuf==4.25
 pyarrow==18.1.0
