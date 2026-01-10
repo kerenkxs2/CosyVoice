@@ -85,8 +85,6 @@ func main() {
 	fmt.Println()
 	fmt.Println("To stop: press Ctrl+C")
 	fmt.Println("============================================================")
-	// IMPORTANT: keep this as the LAST startup line printed.
-	fmt.Println(url)
 
 	// Wait for Ctrl+C, then stop the webui process and exit.
 	<-sigCh
