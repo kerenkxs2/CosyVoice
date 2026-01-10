@@ -135,7 +135,7 @@ func ensureVenvAndDeps(ctx context.Context, repoRoot string) (string, error) {
 }
 
 func startWebUI(repoRoot, pythonExe string, cfg Config, logFile *os.File) (*exec.Cmd, error) {
-	args := []string{"webui.py", "--port", fmt.Sprintf("%d", cfg.Port), "--model_dir", cfg.ModelDir}
+	args := []string{"webui.py", "--port", fmt.Sprintf("%d", cfg.Port), "--model_dir", cfg.ModelDir, "--simple"}
 	cmd := exec.Command(pythonExe, args...)
 	cmd.Dir = repoRoot
 
