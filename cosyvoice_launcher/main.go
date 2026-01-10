@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -43,6 +44,7 @@ func main() {
 	}
 
 	url := fmt.Sprintf("http://localhost:%d/", cfg.Port)
+	waitURL := fmt.Sprintf("http://127.0.0.1:%d/", cfg.Port)
 
 	ctx := context.Background()
 	sigCh := make(chan os.Signal, 1)
@@ -66,7 +68,7 @@ func main() {
 	fatalIf(err)
 
 	fmt.Println("[3/4] Waiting for Web UI to be reachable...")
-	err = waitForURL(url, cfg.Timeout)
+	err = waitForURL(waitURL, cfg.Timeout)
 	if err != nil {
 		fmt.Printf("[ERROR] Web UI did not become reachable: %v\n", err)
 		fmt.Printf("Check logs: %s\n", logPath)
@@ -156,7 +158,14 @@ func startWebUI(repoRoot, pythonExe string, cfg Config, logFile *os.File) (*exec
 
 func waitForURL(url string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
-	client := &http.Client{Timeout: 2 * time.Second}
+	transport := &http.Transport{
+		Proxy: nil,
+		DialContext: (&net.Dialer{
+			Timeout:   250 * time.Millisecond,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+	}
+	client := &http.Client{Timeout: 800 * time.Millisecond, Transport: transport}
 	for {
 		if time.Now().After(deadline) {
 			return fmt.Errorf("timeout after %s", timeout)
@@ -169,7 +178,7 @@ func waitForURL(url string, timeout time.Duration) error {
 				return nil
 			}
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 
