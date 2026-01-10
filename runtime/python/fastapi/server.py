@@ -60,9 +60,9 @@ class OpenAITTSRequest(BaseModel):
 # Defaults used by /v1/audio/speech (set in __main__)
 default_prompt_text: str = ''
 default_spk_id: str = ''
-default_prompt_speech_16k = None
+default_prompt_wav_path: str = ''
 
-# Optional voice presets (set in __main__): voice_id -> {"text": str, "speech_16k": Tensor}
+# Optional voice presets (set in __main__): voice_id -> {"text": str, "wav_path": str}
 voice_prompts: Dict[str, Dict[str, Any]] = {}
 
 
@@ -144,20 +144,20 @@ async def openai_audio_speech(req: OpenAITTSRequest):
     speed = float(req.speed or 1.0)
 
     if hasattr(cosyvoice, 'inference_zero_shot'):
-        if default_prompt_speech_16k is None:
-            raise RuntimeError('default_prompt_speech_16k is not set; run server.py directly or provide --default_prompt_wav')
+        if not default_prompt_wav_path or not os.path.exists(default_prompt_wav_path):
+            raise RuntimeError('default_prompt_wav_path is not set or missing; run server.py directly or provide --default_prompt_wav')
 
         prompt_text = default_prompt_text
-        prompt_speech_16k = default_prompt_speech_16k
+        prompt_wav = default_prompt_wav_path
         if req.voice and req.voice in voice_prompts:
             prompt_text = (voice_prompts[req.voice].get('text') or '').strip() or prompt_text
-            prompt_speech_16k = voice_prompts[req.voice].get('speech_16k') or prompt_speech_16k
+            prompt_wav = voice_prompts[req.voice].get('wav_path') or prompt_wav
 
         # If we don't have a transcript for the prompt audio, cross-lingual does not require prompt_text.
         if (not prompt_text) and hasattr(cosyvoice, 'inference_cross_lingual'):
             model_output = cosyvoice.inference_cross_lingual(
                 tts_text,
-                prompt_speech_16k,
+                prompt_wav,
                 stream=False,
                 speed=speed,
             )
@@ -165,7 +165,7 @@ async def openai_audio_speech(req: OpenAITTSRequest):
             model_output = cosyvoice.inference_zero_shot(
                 tts_text,
                 prompt_text,
-                prompt_speech_16k,
+                prompt_wav,
                 stream=False,
                 speed=speed,
             )
@@ -215,7 +215,7 @@ if __name__ == '__main__':
     # Globals used by the OpenAI-compatible endpoint
     default_prompt_text = args.default_prompt_text
     default_spk_id = args.default_spk_id
-    default_prompt_speech_16k = load_wav(args.default_prompt_wav, 16000)
+    default_prompt_wav_path = args.default_prompt_wav
 
     # Optional voice presets
     try:
@@ -233,8 +233,8 @@ if __name__ == '__main__':
                     if not os.path.exists(wav_path):
                         continue
                     voice_prompts[str(voice_id)] = {
-                        'text': spec.get('text', '') or default_prompt_text,
-                        'speech_16k': load_wav(wav_path, 16000),
+                        'text': spec.get('text', '') or '',
+                        'wav_path': wav_path,
                     }
     except Exception as e:
         logging.warning(f'failed to load voices_manifest: {e}')
