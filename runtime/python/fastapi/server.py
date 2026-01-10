@@ -147,14 +147,22 @@ async def openai_audio_speech(req: OpenAITTSRequest):
         if not default_prompt_wav_path or not os.path.exists(default_prompt_wav_path):
             raise RuntimeError('default_prompt_wav_path is not set or missing; run server.py directly or provide --default_prompt_wav')
 
+        selected_voice = (req.voice or '').strip()
         prompt_text = default_prompt_text
         prompt_wav = default_prompt_wav_path
-        if req.voice and req.voice in voice_prompts:
-            prompt_text = (voice_prompts[req.voice].get('text') or '').strip() or prompt_text
-            prompt_wav = voice_prompts[req.voice].get('wav_path') or prompt_wav
+
+        # If a voice is specified, use it even if its transcript is empty (that enables cross-lingual).
+        if selected_voice:
+            if selected_voice not in voice_prompts:
+                logging.warning(f'unknown voice "{selected_voice}"; using default prompt')
+            else:
+                prompt_wav = voice_prompts[selected_voice].get('wav_path') or prompt_wav
+                prompt_text = (voice_prompts[selected_voice].get('text') or '').strip()
+
+        logging.info(f'/v1/audio/speech voice={selected_voice or "<default>"} prompt_wav={prompt_wav} prompt_text_len={len(prompt_text)}')
 
         # If we don't have a transcript for the prompt audio, cross-lingual does not require prompt_text.
-        if (not prompt_text) and hasattr(cosyvoice, 'inference_cross_lingual'):
+        if (prompt_text == '') and hasattr(cosyvoice, 'inference_cross_lingual'):
             model_output = cosyvoice.inference_cross_lingual(
                 tts_text,
                 prompt_wav,
@@ -176,11 +184,15 @@ async def openai_audio_speech(req: OpenAITTSRequest):
     pcm16le = collect_pcm16le(model_output)
 
     fmt = (req.response_format or 'wav').lower()
+    headers = {
+        'X-CosyVoice-Voice': (req.voice or ''),
+    }
+
     if fmt == 'pcm':
-        return Response(content=pcm16le, media_type='application/octet-stream')
+        return Response(content=pcm16le, media_type='application/octet-stream', headers=headers)
 
     wav_bytes = pcm16le_to_wav_bytes(pcm16le, cosyvoice.sample_rate)
-    return Response(content=wav_bytes, media_type='audio/wav')
+    return Response(content=wav_bytes, media_type='audio/wav', headers=headers)
 
 
 if __name__ == '__main__':
