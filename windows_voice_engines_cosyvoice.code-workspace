@@ -20,7 +20,8 @@
     "search.exclude": {
       "**/.venv": true,
       "**/pretrained_models": true
-    }
+    },
+    "python.languageServer": "None"
   },
   "extensions": {
     "recommendations": [
