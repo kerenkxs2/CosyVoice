@@ -150,16 +150,25 @@ async def openai_audio_speech(req: OpenAITTSRequest):
         prompt_text = default_prompt_text
         prompt_speech_16k = default_prompt_speech_16k
         if req.voice and req.voice in voice_prompts:
-            prompt_text = voice_prompts[req.voice].get('text') or prompt_text
+            prompt_text = (voice_prompts[req.voice].get('text') or '').strip() or prompt_text
             prompt_speech_16k = voice_prompts[req.voice].get('speech_16k') or prompt_speech_16k
 
-        model_output = cosyvoice.inference_zero_shot(
-            tts_text,
-            prompt_text,
-            prompt_speech_16k,
-            stream=False,
-            speed=speed,
-        )
+        # If we don't have a transcript for the prompt audio, cross-lingual does not require prompt_text.
+        if (not prompt_text) and hasattr(cosyvoice, 'inference_cross_lingual'):
+            model_output = cosyvoice.inference_cross_lingual(
+                tts_text,
+                prompt_speech_16k,
+                stream=False,
+                speed=speed,
+            )
+        else:
+            model_output = cosyvoice.inference_zero_shot(
+                tts_text,
+                prompt_text,
+                prompt_speech_16k,
+                stream=False,
+                speed=speed,
+            )
     else:
         # Fall back to SFT if available (requires preset voice).
         model_output = cosyvoice.inference_sft(tts_text, default_spk_id, stream=False, speed=speed)

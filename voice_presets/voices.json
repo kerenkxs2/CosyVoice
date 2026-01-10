@@ -5,6 +5,6 @@
   },
   "voice": {
     "wav": "voice_presets/voice/sample.wav",
-    "text": "REPLACE_WITH_TRANSCRIPT_OF_SAMPLE_WAV"
+    "text": ""
   }
 }

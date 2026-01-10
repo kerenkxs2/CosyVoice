@@ -171,14 +171,14 @@ def generate_audio(tts_text, mode_checkbox_group, sft_dropdown, prompt_voice, pr
 
 
 def _generate_simple(tts_text, voice, seed, speed):
-    # Minimal UI path: voice is a preset prompt wav+text from voice_presets.
+    # Minimal UI path: voice is a preset prompt wav (+ optional transcript).
     if not voice or voice not in voice_presets:
         gr.Warning('Select a voice.')
         return (cosyvoice.sample_rate, default_data)
 
     spec = voice_presets[voice]
     prompt_wav = spec.get('wav')
-    prompt_text = spec.get('text') or ''
+    prompt_text = (spec.get('text') or '').strip()
     if not prompt_wav or not os.path.exists(prompt_wav):
         gr.Warning('Voice preset wav not found.')
         return (cosyvoice.sample_rate, default_data)
@@ -186,8 +186,16 @@ def _generate_simple(tts_text, voice, seed, speed):
     # Non-streaming: avoids ffmpeg/pydub dependency for ADTS conversion.
     set_all_random_seed(seed)
     chunks = []
-    for out in cosyvoice.inference_zero_shot(tts_text, prompt_text, prompt_wav, stream=False, speed=speed):
-        chunks.append(out['tts_speech'].numpy().flatten())
+
+    # If we don't have a transcript for the prompt audio, fall back to cross-lingual,
+    # which does not require prompt_text.
+    if prompt_text == '' and hasattr(cosyvoice, 'inference_cross_lingual'):
+        for out in cosyvoice.inference_cross_lingual(tts_text, prompt_wav, stream=False, speed=speed):
+            chunks.append(out['tts_speech'].numpy().flatten())
+    else:
+        for out in cosyvoice.inference_zero_shot(tts_text, prompt_text, prompt_wav, stream=False, speed=speed):
+            chunks.append(out['tts_speech'].numpy().flatten())
+
     audio = _concat_audio_chunks(chunks)
     return (cosyvoice.sample_rate, audio)
 
