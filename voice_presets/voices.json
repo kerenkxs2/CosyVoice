@@ -1,5 +1,5 @@
 {
-  "default_prompt": {
+  "female_default": {
     "wav": "asset/zero_shot_prompt.wav",
     "text": "希望你以后能够做的比我还好呦。"
   }
